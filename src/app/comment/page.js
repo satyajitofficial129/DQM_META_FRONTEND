@@ -332,8 +332,8 @@ const Comment = () => {
             message: { 
                 text: replyMessage 
             },
-            // tag: "post_purchase_update",
-            tag: "account_update",
+            tag: "post_purchase_update",
+            // tag: "account_update",
 
         };
 

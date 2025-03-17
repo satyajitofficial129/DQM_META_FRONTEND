@@ -5,7 +5,7 @@ import MessageItem from "@/components/Message/MessagesList";
 import ChatSidebar from "@/components/Sidebar/ChatSidebar";
 import SelectField from '@/components/Select/Select';
 import { Image, Offcanvas } from 'react-bootstrap';
-import { FaAlignLeft, FaBookmark, FaCheck, FaClipboard, FaComment, FaCopy, FaEdit, FaEnvelope, FaEye, FaGripVertical, FaLevelDownAlt, FaPaperclip, FaPlus, FaRegClock, FaRegSmile, FaSearch, FaShareAlt, FaTrashAlt, FaUserPlus } from 'react-icons/fa';
+import { FaAlignLeft, FaBookmark, FaCheck, FaClipboard, FaComment, FaCopy, FaEdit, FaEnvelope, FaEye, FaGripVertical, FaLevelDownAlt, FaPaperclip, FaPlus, FaRegClock, FaRegSmile, FaSearch, FaShareAlt, FaTimes, FaTrashAlt, FaUserPlus } from 'react-icons/fa';
 import ContentSidebar from '@/components/Sidebar/ContentSidebar';
 import styles from '@/styles/Comment.module.css';
 import $ from "jquery";
@@ -35,12 +35,16 @@ const Chat = () => {
     const [details, setDetails] = useState('');
     const [templates, setTemplates] = useState([]);
     const [editingTemplateId, setEditingTemplateId] = useState(null);
+    const [isMessageDisabled, setIsMessageDisabled] = useState(false);
+
     // get user list funcationalities
     const [userList, setUserList] = useState([]);
     const [activeConversationCount, setActiveConversationCount] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [file, setFile] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const fileInputRef = useRef(null);
     const [timeElapsed, setTimeElapsed] = useState(0);
     const [activeConversation, setActiveConversation] = useState({
         conversationId: '',
@@ -52,7 +56,7 @@ const Chat = () => {
 
     });
     const apiBaseUrl = NEXT_PUBLIC_API_BASE_URL;
-    const token =NEXT_PUBLIC_API_TOKEN;
+    const token = NEXT_PUBLIC_API_TOKEN;
     const checkboxRef = useRef(null);
 
     useEffect(() => {
@@ -83,87 +87,159 @@ const Chat = () => {
     const handleMessageSubmit = async () => {
         const userID = activeConversation.unique_facebook_id;
         const isChecked = checkboxRef.current.checked;
-        if (!userID) {
-            console.error("userID is undefined");
-            return;
-        }
-        if (!Message || Message.trim() === "") {
-            toast.error('You can not sent an empty message!');
-            return;
-        }
-        if (!sentiment) {
-            toast.error('Sentiment cannot be null!');
-            return;
-        }
-        const payload = {
-            recipient: {
-                id: userID,
-            },
-            message: {
-                text: Message || "hello test",
-            },
-            tag: "post_purchase_update",
-        };
-        // console.log('Payload:', payload);
+
+        if (!isValidMessage(userID, Message, sentiment)) return;
+
         const authUserId = await getAuthUserId();
-        const localPayload = {
-            to: userID,
-            message_content: Message,
-            is_checked: isChecked,
-            sentiment: sentiment?.value || null,
-            assign_user_id : authUserId,
-            total_time: timeElapsed,
-        };
-        // console.log('localPayload:', localPayload);
+        const localPayload = createLocalPayload(userID, authUserId, isChecked);
+
         try {
-            const response = await fetch(
-                `${META_API_URL}/${PAGE_ID}/messages?access_token=${PAGE_ACCESS_TOKEN}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                }
-            );
-            const data = await response.json();
+            const payload = await createMessagePayload(userID);
+            const response = await sendMessageToFacebook(payload);
+
             if (response.ok) {
-                const endpoint = '/send-reply';
-                const url = `${apiBaseUrl}${endpoint}`;
-                const backendResponse = await axios.post(url, localPayload);
+                const backendResponse = await sendMessageToBackend(localPayload);
                 if (backendResponse.status === 200) {
-                    toast.success('Message sent Successfully!');
-                    setMessage('');
-                    if (isChecked) {
-                        setIsActive(false);
-                        checkboxRef.current.checked = false;
-                    }
-                    const newMessage = {
-                        message_content: Message,
-                        sender: 'You',
-                        created_time: new Date().toISOString(),
-                        isMe: true,
-                        isCurrentMessage: true,
-                    };
-                    setActiveConversation(prevState => ({
-                        ...prevState,
-                        messages: [
-                            ...prevState.messages,
-                            newMessage,
-                        ],
-                    }));
-                    fetchUserList();
-                    setUserId("");
-                }
-                else {
-                    toast.error(`Error sending message to backend: ${backendResponse.data.error.message}`);
+                    handleSuccess();
+                } else {
+                    handleError(backendResponse.data.error.message, 'backend');
                 }
             } else {
-                toast.error(`Error sending message to Facebook: ${data.error.message}`);
+                handleError(response.data.error.message, 'Facebook');
             }
         } catch (error) {
-            toast.error('Error sending message: ' + error.message);
-            console.error('Error sending message:', error);
+            handleError(error.message, 'general');
         }
     };
+
+    // Helper function to validate message and sentiment
+    const isValidMessage = (userID, message, sentiment) => {
+        if (!userID) {
+            console.error("userID is undefined");
+            return false;
+        }
+        if (!file) {
+        if (!message || message.trim() === "") {
+            toast.error('You cannot send an empty message!');
+            return false;
+        }}
+        if (!sentiment) {
+            toast.error('Sentiment cannot be null!');
+            return false;
+        }
+        return true;
+    };
+
+    // Helper function to create the local payload
+    const createLocalPayload = (userID, authUserId, isChecked) => ({
+        to: userID,
+        message_content: Message,
+        is_checked: isChecked,
+        sentiment: sentiment?.value || null,
+        assign_user_id: authUserId,
+        total_time: timeElapsed,
+    });
+
+    // Helper function to create the message payload
+    const createMessagePayload = async (userID) => {
+        let payload;
+        if (file) {
+            const fileUploadData = await uploadFile();
+            payload = {
+                recipient: { id: userID },
+                message: {
+                    attachment: {
+                        type: "file",
+                        payload: { attachment_id: fileUploadData.attachment_id },
+                    },
+                },
+            };
+        } else {
+            payload = {
+                recipient: { id: userID },
+                message: { text: Message || "hello test" },
+                tag: "post_purchase_update",
+            };
+        }
+        return payload;
+    };
+
+    // Helper function to handle file upload
+    const uploadFile = async () => {
+        const message_content = {
+            attachment: { type: "file", payload: {} },
+        };
+
+        const fileFormData = new FormData();
+        fileFormData.append("file", file);
+        fileFormData.append("message", JSON.stringify(message_content));
+
+        const fileUploadResponse = await fetch(
+            `${META_API_URL}/${PAGE_ID}/message_attachments?access_token=${PAGE_ACCESS_TOKEN}`,
+            { method: 'POST', body: fileFormData }
+        );
+
+        return await fileUploadResponse.json();
+    };
+
+    // Helper function to send message to Facebook
+    const sendMessageToFacebook = async (payload) => {
+        return await fetch(
+            `${META_API_URL}/${PAGE_ID}/messages?access_token=${PAGE_ACCESS_TOKEN}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            }
+        );
+    };
+
+    // Helper function to send message to backend
+    const sendMessageToBackend = async (localPayload) => {
+        const endpoint = '/send-reply';
+        const url = `${apiBaseUrl}${endpoint}`;
+        return await axios.post(url, localPayload);
+    };
+
+    // Helper function to handle success after sending message
+    const handleSuccess = () => {
+        toast.success('Message sent successfully!');
+        setMessage('');
+        resetFormState();
+        updateMessages();
+    };
+
+    // Helper function to reset form state after successful submission
+    const resetFormState = () => {
+        if (checkboxRef.current.checked) {
+            setIsActive(false);
+            checkboxRef.current.checked = false;
+        }
+    };
+
+    // Helper function to update the conversation messages
+    const updateMessages = () => {
+        const newMessage = {
+            message_content: Message,
+            sender: 'You',
+            created_time: new Date().toISOString(),
+            isMe: true,
+            isCurrentMessage: true,
+        };
+        setActiveConversation(prevState => ({
+            ...prevState,
+            messages: [...prevState.messages, newMessage],
+        }));
+        fetchUserList();
+        setUserId("");
+    };
+
+    // Helper function to handle errors
+    const handleError = (errorMessage, source) => {
+        toast.error(`Error sending message to ${source}: ${errorMessage}`);
+        console.error(`Error sending message: ${errorMessage}`);
+    };
+
 
     const handleShow = async () => {
         setShowOffcanvas(true);
@@ -174,7 +250,7 @@ const Chat = () => {
         const cursorPos = textarea.selectionStart;
         const newMessage = Message.slice(0, cursorPos) + "\n" + Message.slice(cursorPos);
         setMessage(newMessage);
-        
+
         // Move the cursor after the new line
         setTimeout(() => {
             textarea.selectionStart = cursorPos + 2;
@@ -284,18 +360,18 @@ const Chat = () => {
 
         // Subscribe to the channel
         const channel = pusher.subscribe('facebook-notification');
-        
+
         // Bind the event to update the conversation when a new message comes in
         channel.bind('facebook.notification', (data) => {
             console.log('Received data:', data);
             // console.log('Comparing unique_facebook_id:', data.unique_facebook_id, 'with', activeConversation?.unique_facebook_id);
             // Check if the unique Facebook ID matches
 
-            if(data.unique_facebook_id !== 'undefined' && data.unique_facebook_id !== '111074608141788') {
+            if (data.unique_facebook_id !== 'undefined' && data.unique_facebook_id !== '111074608141788') {
                 if (data.unique_facebook_id === activeConversation?.unique_facebook_id) {
                     // console.log('if');
                     // console.log('Matching conversation found.');
-                    
+
                     // Add the new message to the conversation
                     setActiveConversation((prevConversation) => {
                         const updatedConversation = {
@@ -305,14 +381,14 @@ const Chat = () => {
                         // console.log('Updated conversation:', updatedConversation);
                         return updatedConversation;
                     });
-                    
+
                     // console.log('Messages after update:', activeConversation?.messages);
-                    
+
                     // Fetch the updated data from the API to get the latest messages
                     // console.log('Fetching data for user ID:', userId);
                     fetchData(userId);
                     fetchUserList();
-                    
+
                     // Optionally show a Toastr notification
                     // console.log(`Showing Toastr notification: New message from ${data.user_name}`);
                     toast.success(`New Message from ${data.user_name}`, `New Message`, {
@@ -324,7 +400,7 @@ const Chat = () => {
                         progress: undefined,
                         theme: "light",
                     });
-                    
+
                 } else {
                     // console.log('else');
                     fetchUserList();
@@ -338,17 +414,17 @@ const Chat = () => {
                         progress: undefined,
                         theme: "light",
                     });
-                    
+
                 }
             }
 
-        });        
+        });
 
         // Clean up when component unmounts
         return () => {
             pusher.unsubscribe('facebook-notification');
         };
-    }, [userId, activeConversation?.unique_facebook_id]); 
+    }, [userId, activeConversation?.unique_facebook_id]);
 
     const handleBack = () => {
         setIsActive(false);
@@ -383,8 +459,29 @@ const Chat = () => {
             textarea.focus();
         }, 0);
     };
+    const handleFileClick = () => {
+        fileInputRef.current.click();
+    };
     const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
+        if (e.target.files.length > 0) {
+            const selectedFile = e.target.files[0];
+            setFile(selectedFile);
+            // Reset the message in the textarea
+            setMessage("");
+            
+            // Check file type
+            if (selectedFile.type.startsWith("image/")) {
+                setPreview(URL.createObjectURL(selectedFile)); // Image preview
+            } else if (selectedFile.type === "application/pdf") {
+                setPreview("https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg"); // PDF preview
+            } else {
+                setPreview(null); // Reset preview for unsupported files
+            }
+        }
+    };
+    const handleFileDelete = () => {
+        setFile(null);
+        setPreview(null);
     };
     const handleEditResponse = (templateId, shortValue, detailsValue) => {
 
@@ -456,7 +553,7 @@ const Chat = () => {
                 setIsActive(false);
                 fetchUserList();
                 toast.success('Archive successfully!');
-                
+
             }
         } catch (error) {
             console.error('Error:', error);
@@ -464,7 +561,7 @@ const Chat = () => {
     };
     const handleFollowUp = async (uniqueFacebookId, e) => {
         e.preventDefault();
-        try{
+        try {
             const endpoint = `/manage-follow-up/${uniqueFacebookId}`;
             const url = `${apiBaseUrl}${endpoint}`;
             const response = await axios.get(url);
@@ -529,12 +626,12 @@ const Chat = () => {
         // const interval = setInterval(fetchUserList, 60000);
         // return () => clearInterval(interval);
     }, [token]);
-    
+
     const handleUserClick = (event, message) => {
         event.preventDefault();
         const uniquefacebookId = message.uniquefacebookId;
         const userId = message.id;
-    
+
         if (!uniquefacebookId) {
             console.error("uniquefacebookId is missing!");
             return;
@@ -546,25 +643,25 @@ const Chat = () => {
         } else {
             setIsActive(true);
         }
-        
+
         fetchData(userId);
         setCurrentUserId(userId);
     };
-    
+
     const [currentUserId, setCurrentUserId] = useState(null);
-    
+
     useEffect(() => {
         let timerTimeout;
         let fetchTimeout;
         const fetchDataInterval = 4000;
         const timerInterval = 1000;
-    
+
         if (isActive && userId !== null) {
             const updateTime = () => {
                 setTimeElapsed(prevTime => prevTime + 1);
                 timerTimeout = setTimeout(updateTime, timerInterval);
             };
-    
+
             // const fetchDataAtInterval = () => {
             //     fetchData(userId);
             //     fetchTimeout = setTimeout(fetchDataAtInterval, fetchDataInterval);
@@ -572,14 +669,14 @@ const Chat = () => {
             updateTime();
             // fetchDataAtInterval();
         }
-    
+
         // Cleanup function
         return () => {
             clearTimeout(timerTimeout);
             clearTimeout(fetchTimeout);
         };
     }, [isActive, userId]);
-    
+
 
     return (
         <section className="chat-section">
@@ -589,7 +686,7 @@ const Chat = () => {
                     {/* <ContentSidebar handleClick={handleClick} userList={userList} /> */}
                     <ContentSidebar
                         listType="user"
-                        listData={userList} 
+                        listData={userList}
                         handleClick={handleUserClick}
                     />
 
@@ -626,8 +723,8 @@ const Chat = () => {
 
                                                     <li key={index} className={`conversation-item ${message.isCurrentMessage ? "" : (message.unique_facebook_id !== null ? "me" : "")}`}>
                                                         <ImageSlug
-                                                                name={message && message.unique_facebook_id === null ? 'Edu Tune' : activeConversation?.name}
-                                                            />
+                                                            name={message && message.unique_facebook_id === null ? 'Edu Tune' : activeConversation?.name}
+                                                        />
 
                                                         <div className="conversation-item-content">
                                                             <div className="conversation-item-wrapper">
@@ -678,12 +775,12 @@ const Chat = () => {
                                 <div className='col-lg-12' style={{ padding: '8px 16px', backgroundColor: '#fff', }}>
                                     <div className="d-flex justify-content-between align-items-center">
                                         <div style={{ display: "flex", justifyContent: 'space-between', gap: '24px' }}>
-                                        <FaLevelDownAlt 
-                                            className={styles.icon} 
-                                            onClick={handleNewLine} 
-                                            data-title="Add New Line" 
-                                            title="Add New Line"
-                                        />
+                                            <FaLevelDownAlt
+                                                className={styles.icon}
+                                                onClick={handleNewLine}
+                                                data-title="Add New Line"
+                                                title="Add New Line"
+                                            />
                                             <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
                                                 <input
                                                     type="checkbox"
@@ -700,7 +797,7 @@ const Chat = () => {
                                                 />
                                                 <span style={{ marginLeft: "8px", fontSize: "14px", color: "#333" }}>Archive without message</span>
                                             </label>
-                                            
+
                                             <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
                                                 {activeConversation.is_follow_up === 0 && (
                                                     <input
@@ -860,7 +957,24 @@ const Chat = () => {
                                             </Offcanvas.Body>
                                         </Offcanvas>
                                     </div>
-                                    {file && <p>{file.name}</p>}
+                                    {file && (
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                marginTop: "10px",
+                                            }}
+                                        >
+                                            <p style={{ margin: '0 10px' }}>{file.name}</p>
+                                            <FaTimes
+                                                style={{
+                                                    cursor: "pointer",
+                                                    color: "red",
+                                                }}
+                                                onClick={handleFileDelete}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="conversation-form">
@@ -879,11 +993,37 @@ const Chat = () => {
                                             placeholder="Type here.."
                                             value={Message}
                                             onChange={(e) => setMessage(e.target.value)}
+                                            disabled={isMessageDisabled}
                                         />
                                     </div>
                                 </div>
                                 <div className='col-lg-12' style={{ padding: '8px 16px', backgroundColor: '#fff', }}>
-                                    <div className='selectField' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', gap: '10px', }}>
+                                    <div className='selectField' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', }}>
+                                        <div>
+                                            <div
+                                                style={{
+                                                    cursor: "pointer",
+                                                    width: "35px",
+                                                    height: "35px",
+                                                    border: "2px dashed #ccc",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                }}
+                                                onClick={handleFileClick}
+                                            >
+                                                <FaPlus />
+                                            </div>
+
+                                            {/* Hidden file input */}
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                style={{ display: "none" }}
+                                                onChange={handleFileChange}
+                                                accept="image/*,application/pdf"
+                                            />
+                                        </div>
                                         <SelectField
                                             isMulti={false}
                                             options={sentimentOptions}
@@ -904,7 +1044,7 @@ const Chat = () => {
                                                 borderRadius: "4px",
                                             }}
                                             ref={checkboxRef}
-                                            defaultChecked={true} 
+                                            defaultChecked={true}
                                         />
                                         <button
                                             type="button"
