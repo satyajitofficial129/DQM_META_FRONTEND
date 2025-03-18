@@ -18,6 +18,7 @@ import getAuthUserId from '@/utils/getAuthUserId';
 
 import { META_API_URL, NEXT_PUBLIC_API_BASE_URL, NEXT_PUBLIC_API_TOKEN, PAGE_ACCESS_TOKEN, PAGE_ID } from '@/utils/settings';
 import Pusher from 'pusher-js';
+import FileUploadModal from '@/components/FileUpload/FileUploadModal';
 
 
 const Chat = () => {
@@ -25,8 +26,6 @@ const Chat = () => {
 
     const [sentiment, setSentiment] = useState(null);
     const [showOffcanvas, setShowOffcanvas] = useState(false);
-    const [showModal, setShowModal] = useState(false);
-    const [modalContent, setModalContent] = useState('');
     const [messageTemplate, setMessageTemplate] = useState([]);
     const [isActive, setIsActive] = useState(false);
     const [userId, setUserId] = useState(null);
@@ -459,30 +458,7 @@ const Chat = () => {
             textarea.focus();
         }, 0);
     };
-    const handleFileClick = () => {
-        fileInputRef.current.click();
-    };
-    const handleFileChange = (e) => {
-        if (e.target.files.length > 0) {
-            const selectedFile = e.target.files[0];
-            setFile(selectedFile);
-            // Reset the message in the textarea
-            setMessage("");
-            
-            // Check file type
-            if (selectedFile.type.startsWith("image/")) {
-                setPreview(URL.createObjectURL(selectedFile)); // Image preview
-            } else if (selectedFile.type === "application/pdf") {
-                setPreview("https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg"); // PDF preview
-            } else {
-                setPreview(null); // Reset preview for unsupported files
-            }
-        }
-    };
-    const handleFileDelete = () => {
-        setFile(null);
-        setPreview(null);
-    };
+       
     const handleEditResponse = (templateId, shortValue, detailsValue) => {
 
         setShort(shortValue);
@@ -578,10 +554,6 @@ const Chat = () => {
         setEditingTemplateId(null);
         setShort('');
         setDetails('');
-    };
-    const closeModal = () => {
-        setShowModal(false);
-        setModalContent('');
     };
     const fetchUserList = async () => {
         try {
@@ -999,31 +971,7 @@ const Chat = () => {
                                 </div>
                                 <div className='col-lg-12' style={{ padding: '8px 16px', backgroundColor: '#fff', }}>
                                     <div className='selectField' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', }}>
-                                        <div>
-                                            <div
-                                                style={{
-                                                    cursor: "pointer",
-                                                    width: "35px",
-                                                    height: "35px",
-                                                    border: "2px dashed #ccc",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                }}
-                                                onClick={handleFileClick}
-                                            >
-                                                <FaPlus />
-                                            </div>
-
-                                            {/* Hidden file input */}
-                                            <input
-                                                type="file"
-                                                ref={fileInputRef}
-                                                style={{ display: "none" }}
-                                                onChange={handleFileChange}
-                                                accept="image/*,application/pdf"
-                                            />
-                                        </div>
+                                    <FileUploadModal userId={userId} facebookId ={activeConversation.unique_facebook_id}  />
                                         <SelectField
                                             isMulti={false}
                                             options={sentimentOptions}
@@ -1039,7 +987,7 @@ const Chat = () => {
                                                 width: "80px",
                                                 height: "38px",
                                                 cursor: "pointer",
-                                                accentColor: "#662d91",
+                                                accentColor: "#00a884",
                                                 border: "2px solid rgb(204, 204, 204)",
                                                 borderRadius: "4px",
                                             }}
@@ -1056,29 +1004,7 @@ const Chat = () => {
                                     </div>
                                 </div>
                             </div>
-                            {showModal && (
-                                <div className="modal show d-block" style={{ background: 'rgba(0, 0, 0, 0.5)' }}>
-                                    <div className="modal-dialog modal-lg modal-dialog-centered">
-                                        <div className="modal-content">
-                                            <div className="modal-header">
-                                                <h5 className="modal-title">{modalContent}</h5>
-                                                <button type="button" className="btn-close" onClick={closeModal}></button>
-                                            </div>
-                                            <div className="modal-body">
-                                                <p>Here you can {modalContent.toLowerCase()}.</p>
-                                            </div>
-                                            <div className="modal-footer">
-                                                <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                                                    Close
-                                                </button>
-                                                <button type="button" className="btn btn-primary">
-                                                    Save Changes
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            
                         </div>
                     </div>
                 </div>
