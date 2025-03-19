@@ -5,15 +5,15 @@ import axios from 'axios';
 import { META_API_URL, NEXT_PUBLIC_API_BASE_URL, NEXT_PUBLIC_API_TOKEN, PAGE_ACCESS_TOKEN, PAGE_ID } from '@/utils/settings';
 import { toast } from "react-toastify";
 
-const FileUploadModal = ({ userId , facebookId }) => {
+const FileUploadModal = ({ userId , facebookId , fileUploadSuccess}) => {
     useEffect(() => {
-        // console.log(userId);
-        // console.log(facebookId);
     }, [userId,facebookId]);
     const [showModal, setShowModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [filePreview, setFilePreview] = useState(null);
     const [fileType, setFileType] = useState("image");
+    const [fileTypeName, setFileTypeName] = useState('');
+    const apiBaseUrl = NEXT_PUBLIC_API_BASE_URL;
 
     const handleFileClick = () => setShowModal(true);
 
@@ -27,19 +27,15 @@ const FileUploadModal = ({ userId , facebookId }) => {
         
         if (file) {
             setSelectedFile(file);
-    
-            // Determine the file type dynamically
             const fileType = file.type.startsWith("image")
                 ? "image"
                 : file.type.startsWith("audio")
                 ? "audio"
                 : file.type.startsWith("video")
                 ? "video"
-                : "file"; // Default for other types
+                : "file";
     
-            setFileType(fileType); // Set file type state
-    
-            // Set preview based on file type
+            setFileType(fileType);
             if (fileType === "image") {
                 setFilePreview(URL.createObjectURL(file));
             } else {
@@ -56,17 +52,35 @@ const FileUploadModal = ({ userId , facebookId }) => {
     };
 
     const handleUploadFile = async (userID) => {
-        if (!isValidMessage(userID)) return;
-        const authUserId = await getAuthUserId();
+        if (!isValidMessage(facebookId, fileTypeName)) return;
+        const localPayload = createLocalPayload(facebookId, fileTypeName);
         try {
             const payload = await createMessagePayload(userID);
             const response = await sendMessageToFacebook(payload);
             console.log(response);
             if (response.ok) {
-                resetFile();
-                closeModal();
-                toast.success(fileType + ' sent successfully!');
-            } else {
+                try {
+                    const endpoint = '/send-file-reply';
+                    const url = `${apiBaseUrl}${endpoint}`;
+                    const backendResponse = await axios.post(url, localPayload);
+                    console.log(backendResponse);
+            
+                    if (backendResponse.status === 200) {
+                        fileUploadSuccess(backendResponse.data.data.message_content);
+                        resetFile();
+                        closeModal();
+                    } else {
+                        handleError(backendResponse.data.error.message, 'backend');
+                    }
+                    
+                    toast.success(fileType + ' sent successfully!');
+                } catch (error) {
+                    // Handle any errors that occur during the request
+                    console.error("Error sending file:", error);
+                    toast.error("An error occurred while sending the file.");
+                }
+            }
+             else {
                 handleError(response.data.error.message, 'Facebook');
             }
         } catch (error) {
@@ -135,22 +149,34 @@ const FileUploadModal = ({ userId , facebookId }) => {
             return { ok: false, data: error.response?.data || error.message };
         }
     };
-    
-
-    const isValidMessage = (userID) => {
-        if (!userID) {
-            console.error("userID is undefined");
+    // Helper function to create the local payload
+    const createLocalPayload = (facebookId, fileTypeName) => ({
+        to: facebookId,
+        message_content: fileTypeName,
+    });
+    // Helper function to send message to backend
+    const sendMessageToBackend = async (localPayload) => {
+        const endpoint = '/send-file-reply';
+        const url = `${apiBaseUrl}${endpoint}`;
+        return await axios.post(url, localPayload);
+    };
+    const isValidMessage = (facebookId ,fileTypeName) => {
+        console.log('validation');
+        if (!facebookId) {
+            console.error("facebookId is undefined");
             return false;
+        }
+        if (!fileTypeName ) {
+            toast.error('Mention The file Type As a message..');
+            return;
         }
         return true;
     };
-    
     // Helper function to handle errors
     const handleError = (errorMessage, source) => {
         toast.error(`Error sending message to ${source}: ${errorMessage}`);
         console.error(`Error sending message: ${errorMessage}`);
     };
-    
     
 
     return (
@@ -180,6 +206,22 @@ const FileUploadModal = ({ userId , facebookId }) => {
                             </div>
                             <div className="modal-body text-center">
                                 <div className="mb-3">
+                                <input
+                                    placeholder="Enter your File Type here..."
+                                    type="text"
+                                    onChange={(e) => setFileTypeName(e.target.value)}
+                                    style={{
+                                        width: "100%",
+                                        padding: 10,
+                                        border: "1px solid rgb(204, 204, 204)",
+                                        borderRadius: 5,
+                                        fontSize: 14,
+                                        backgroundColor: "rgb(249, 249, 249)"
+                                    }}
+                                />
+
+                                </div>
+                                <div className="mb-3" style={{ textAlign: 'left' }}>
                                     <label className="me-2">
                                         <input
                                             type="radio"
@@ -206,15 +248,6 @@ const FileUploadModal = ({ userId , facebookId }) => {
                                             checked={fileType === "audio"}
                                             onChange={() => { setFileType("audio"); resetFile(); }}
                                         /> Audio
-                                    </label>
-                                    <label>
-                                        <input
-                                            type="radio"
-                                            name="fileType"
-                                            value="video"
-                                            checked={fileType === "video"}
-                                            onChange={() => { setFileType("video"); resetFile(); }}
-                                        /> Video
                                     </label>
                                 </div>
 

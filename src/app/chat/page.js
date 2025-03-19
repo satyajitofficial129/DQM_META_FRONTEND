@@ -233,6 +233,23 @@ const Chat = () => {
         setUserId("");
     };
 
+    const updateMessagesWithFile = (fileType) => {
+        const newMessage = {
+            message_content: fileType, // Store file Type
+            sender: 'You',
+            created_time: new Date().toISOString(),
+            isMe: true,
+            isCurrentMessage: true,
+        };
+    
+        setActiveConversation(prevState => ({
+            ...prevState,
+            messages: [...prevState.messages, newMessage],
+        }));
+    
+        fetchUserList();
+    };
+
     // Helper function to handle errors
     const handleError = (errorMessage, source) => {
         toast.error(`Error sending message to ${source}: ${errorMessage}`);
@@ -971,7 +988,7 @@ const Chat = () => {
                                 </div>
                                 <div className='col-lg-12' style={{ padding: '8px 16px', backgroundColor: '#fff', }}>
                                     <div className='selectField' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', }}>
-                                    <FileUploadModal userId={userId} facebookId ={activeConversation.unique_facebook_id}  />
+                                    <FileUploadModal userId={userId} facebookId ={activeConversation.unique_facebook_id} fileUploadSuccess={updateMessagesWithFile}   />
                                         <SelectField
                                             isMulti={false}
                                             options={sentimentOptions}
