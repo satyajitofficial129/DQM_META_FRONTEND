@@ -5,7 +5,7 @@ import axios from 'axios';
 import { META_API_URL, NEXT_PUBLIC_API_BASE_URL, NEXT_PUBLIC_API_TOKEN, PAGE_ACCESS_TOKEN, PAGE_ID } from '@/utils/settings';
 import { toast } from "react-toastify";
 
-const FileUploadModal = ({ userId , facebookId , fileUploadSuccess}) => {
+const FileUploadModal = ({ userId , facebookId , fileUploadSuccess, setIsActive }) => {
     useEffect(() => {
     }, [userId,facebookId]);
     const [showModal, setShowModal] = useState(false);
@@ -48,6 +48,8 @@ const FileUploadModal = ({ userId , facebookId , fileUploadSuccess}) => {
     const resetFile = () => {
         setSelectedFile(null);
         setFilePreview(null);
+        setIsActive(false)
+        
         document.getElementById("fileInput").value = "";
     };
 
@@ -152,6 +154,7 @@ const FileUploadModal = ({ userId , facebookId , fileUploadSuccess}) => {
     // Helper function to create the local payload
     const createLocalPayload = (facebookId, fileTypeName) => ({
         to: facebookId,
+        message_type: fileType,
         message_content: fileTypeName,
     });
     // Helper function to send message to backend

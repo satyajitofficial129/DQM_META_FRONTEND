@@ -118,10 +118,11 @@ const Chat = () => {
             return false;
         }
         if (!file) {
-        if (!message || message.trim() === "") {
-            toast.error('You cannot send an empty message!');
-            return false;
-        }}
+            if (!message || message.trim() === "") {
+                toast.error('You cannot send an empty message!');
+                return false;
+            }
+        }
         if (!sentiment) {
             toast.error('Sentiment cannot be null!');
             return false;
@@ -235,19 +236,20 @@ const Chat = () => {
 
     const updateMessagesWithFile = (fileType) => {
         const newMessage = {
-            message_content: fileType, // Store file Type
+            message_content: fileType,
             sender: 'You',
             created_time: new Date().toISOString(),
             isMe: true,
             isCurrentMessage: true,
         };
-    
+
         setActiveConversation(prevState => ({
             ...prevState,
             messages: [...prevState.messages, newMessage],
         }));
-    
+        
         fetchUserList();
+        resetFormState();
     };
 
     // Helper function to handle errors
@@ -329,7 +331,7 @@ const Chat = () => {
                     Authorization: `Bearer ${token}`,
                 },
             });
-
+            console.log(response);
             if (response.data.success) {
                 const conversationData = response.data.message_list;
                 const userName = response.data.user_name;
@@ -341,14 +343,13 @@ const Chat = () => {
                 setActiveConversation({
                     messages: conversationData,
                     name: userName,
-                    image: "https://example.com/default-image.jpg", // You can replace with actual image URL
-                    status: "online", // You can also make this dynamic
+                    image: "https://example.com/default-image.jpg",
+                    status: "online",
                     senderId: senderId,
                     unique_facebook_id: unique_facebook_id,
                     is_follow_up: is_follow_up,
                 });
                 setIsActive(true);
-                // console.log('okkk');
             }
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -475,7 +476,7 @@ const Chat = () => {
             textarea.focus();
         }, 0);
     };
-       
+
     const handleEditResponse = (templateId, shortValue, detailsValue) => {
 
         setShort(shortValue);
@@ -720,20 +721,63 @@ const Chat = () => {
                                                                 <div className="conversation-item-box">
                                                                     <div className="conversation-item-text">
                                                                         <div style={{ display: 'flex', gap: '5px', justifyContent: 'flex-start', alignItems: 'start' }}>
-                                                                            <p style={{ marginBottom: '0', textAlign: 'justify' }}>{message.message_content}</p>
-                                                                            {containsDigits(message.message_content) && (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => handleNumberCopyClick(index, message.message_content)} // Pass the message index
-                                                                                    className="conversation-form-button conversation-form-submit"
-                                                                                    title="Copy to clipboard"
-                                                                                    style={{ marginLeft: '5px' }}
-                                                                                >
-                                                                                    {message.name}
-                                                                                    {/* Display FaCheck if the current message is copied, else FaCopy */}
-                                                                                    {copiedMessageIndex === index ? <FaCheck /> : <FaCopy />}
-                                                                                </button>
+                                                                            {message.unique_facebook_id !== null ? (
+                                                                                message.message_type === 'text' ? (
+                                                                                    <>
+                                                                                        <p style={{ marginBottom: 0, textAlign: 'justify' }}>
+                                                                                            {message.message_content || 'No content available'}
+                                                                                        </p>
+                                                                                        {containsDigits(message.message_content) && (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => handleNumberCopyClick(index, message.message_content)}
+                                                                                                className="conversation-form-button conversation-form-submit"
+                                                                                                title="Copy to clipboard"
+                                                                                                style={{ marginLeft: '5px' }}
+                                                                                            >
+                                                                                                {message.name}
+                                                                                                {copiedMessageIndex === index ? <FaCheck /> : <FaCopy />}
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </>
+                                                                                ) : message.message_type === 'image' ? (
+                                                                                    <img
+                                                                                        src={message.message_content}
+                                                                                        alt="Message Image"
+                                                                                        style={{ maxWidth: '100%', height: 'auto', marginBottom: '10px' }}
+                                                                                    />
+                                                                                ) : message.message_type === 'audio' ? (
+                                                                                    <audio controls style={{ marginBottom: '10px' }}>
+                                                                                        <source src={message.message_content} type="audio/mpeg" />
+                                                                                        Your browser does not support the audio element.
+                                                                                    </audio>
+                                                                                ) : message.message_type === 'video' ? (
+                                                                                    <video controls style={{ maxWidth: '100%', marginBottom: '10px' }}>
+                                                                                        <source src={message.message_content} type="video/mp4" />
+                                                                                        Your browser does not support the video tag.
+                                                                                    </video>
+                                                                                ) : message.message_type === 'file' ? (
+                                                                                    <a
+                                                                                        href={message.message_content}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        style={{ color: 'white', textDecoration: 'none' }}
+                                                                                    >
+                                                                                        Download File
+                                                                                    </a>
+                                                                                ) : (
+                                                                                    <p style={{ marginBottom: 0, textAlign: 'justify', color: 'gray' }}>
+                                                                                        Unsupported message type.
+                                                                                    </p>
+                                                                                )
+                                                                            ) : (
+                                                                                <p style={{ marginBottom: 0, textAlign: 'justify' }}>
+                                                                                    {message.message_content || 'No content available'}
+                                                                                </p>
                                                                             )}
+
+
+
                                                                         </div>
 
                                                                         <div className="conversation-item-time">
@@ -988,7 +1032,7 @@ const Chat = () => {
                                 </div>
                                 <div className='col-lg-12' style={{ padding: '8px 16px', backgroundColor: '#fff', }}>
                                     <div className='selectField' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', }}>
-                                    <FileUploadModal userId={userId} facebookId ={activeConversation.unique_facebook_id} fileUploadSuccess={updateMessagesWithFile}   />
+                                        <FileUploadModal userId={userId} facebookId={activeConversation.unique_facebook_id} fileUploadSuccess={updateMessagesWithFile} setIsActive={setIsActive} />
                                         <SelectField
                                             isMulti={false}
                                             options={sentimentOptions}
@@ -1021,7 +1065,7 @@ const Chat = () => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                         </div>
                     </div>
                 </div>
