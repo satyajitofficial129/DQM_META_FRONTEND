@@ -697,8 +697,8 @@ const Chat = () => {
                                         <ImageSlug name={activeConversation.name} />
                                         <div className="conversation-user-name">{activeConversation.name}</div>
                                     </div>
-                                    <div>
-                                        <FaRegClock /> <span style={{ fontWeight: 'bold', color: 'red' }}>Time tracking for this conversation has started... </span> <div style={{ display: 'none' }}> {timeElapsed}</div>
+                                    <div style={{ color: 'green', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <FaRegClock /> <span style={{ fontWeight: 'bold' }}>Time tracking started... </span> <div style={{ display: 'none' }}> {timeElapsed}</div>
                                     </div>
                                 </div>
                             </div>
