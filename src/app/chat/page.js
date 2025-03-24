@@ -331,7 +331,7 @@ const Chat = () => {
                     Authorization: `Bearer ${token}`,
                 },
             });
-            console.log(response);
+            // console.log(response);
             if (response.data.success) {
                 const conversationData = response.data.message_list;
                 const userName = response.data.user_name;
@@ -380,13 +380,17 @@ const Chat = () => {
 
         // Bind the event to update the conversation when a new message comes in
         channel.bind('facebook.notification', (data) => {
-            console.log('Received data:', data);
+            // alert('okk');
+            console.log('Received :', data);
+            
+            // console.log('fetch user list');
             // console.log('Comparing unique_facebook_id:', data.unique_facebook_id, 'with', activeConversation?.unique_facebook_id);
             // Check if the unique Facebook ID matches
 
-            if (data.unique_facebook_id !== 'undefined' && data.unique_facebook_id !== '111074608141788') {
+            if (data.unique_facebook_id !== 'undefined' && data.unique_facebook_id !== '431751180032336') {
                 if (data.unique_facebook_id === activeConversation?.unique_facebook_id) {
-                    // console.log('if');
+                    // alert('okk');
+                    console.log('if');
                     // console.log('Matching conversation found.');
 
                     // Add the new message to the conversation
@@ -403,6 +407,7 @@ const Chat = () => {
 
                     // Fetch the updated data from the API to get the latest messages
                     // console.log('Fetching data for user ID:', userId);
+                    // console.log('fetch user list');
                     fetchData(userId);
                     fetchUserList();
 
@@ -576,6 +581,7 @@ const Chat = () => {
     const fetchUserList = async () => {
         try {
             const authUserId = await getAuthUserId();
+            // console.log('Auth User ID:', authUserId);
             const endpoint = `/user-list/${authUserId}`;
             const url = `${apiBaseUrl}${endpoint}`;
             const response = await axios.get(url, {
@@ -583,6 +589,7 @@ const Chat = () => {
                     Authorization: `Bearer ${token}`,
                 },
             });
+            // console.log('response:', response);
             const formattedUserList = response.data.message.map((user) => {
                 const messageLogs = Array.isArray(user.message_logs) ? user.message_logs : [];
                 const lastMessage = messageLogs.length > 0 ? messageLogs[messageLogs.length - 1] : null;
@@ -599,6 +606,8 @@ const Chat = () => {
                     lastMessageReadStatus: lastMessage ? lastMessage.is_read : null,
                 };
             });
+            // console.log('User List:', formattedUserList);
+            // console.log(formattedUserList);
             setActiveConversationCount(response.data.count);
             setUserList(formattedUserList);
             setLoading(false);
@@ -612,9 +621,6 @@ const Chat = () => {
 
     useEffect(() => {
         fetchUserList();
-
-        // const interval = setInterval(fetchUserList, 60000);
-        // return () => clearInterval(interval);
     }, [token]);
 
     const handleUserClick = (event, message) => {
@@ -697,8 +703,8 @@ const Chat = () => {
                                         <ImageSlug name={activeConversation.name} />
                                         <div className="conversation-user-name">{activeConversation.name}</div>
                                     </div>
-                                    <div>
-                                        <FaRegClock /> <span style={{ fontWeight: 'bold', color: 'red' }}>Time tracking for this conversation has started... </span> <div style={{ display: 'none' }}> {timeElapsed}</div>
+                                    <div style={{ color: 'green', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <FaRegClock /> <span style={{ fontWeight: 'bold' }}>Time tracking started... </span> <div style={{ display: 'none' }}> {timeElapsed}</div>
                                     </div>
                                 </div>
                             </div>
