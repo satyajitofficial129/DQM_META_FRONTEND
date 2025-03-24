@@ -100,7 +100,7 @@ const Page = () => {
         <ChatSidebar />
         <div className="chat-content">
           <div className="table-responsive mt-4" style={{ padding: "20px" }}>
-            <table className="table table-bordered ">
+            <table className="table table-bordered " style={{ height: '95%', overflow: 'scroll' }}>
               <thead className="thead-dark">
                 <tr>
                   <th scope="col" style={{ width: '20%' }}>Customer Name</th>
