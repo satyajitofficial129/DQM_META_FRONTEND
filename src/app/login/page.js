@@ -71,7 +71,7 @@ export default function LoginPage() {
   return (
     <div className={styles.loginContainer}>
       <div className={styles.loginForm}>
-        <h1 className={styles.loginTitle}>Login</h1>
+        <h1 className={styles.loginTitle}>Login Page</h1>
         {error && <p className={styles.errorMessage}>{error}</p>} {/* Error message display */}
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>

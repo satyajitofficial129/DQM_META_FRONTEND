@@ -359,9 +359,6 @@ const Comment = () => {
             handleError('Error sending reply message', error);
         }
     };
-    const saveSentiment = async () => {
-
-    }
     const handleNewLine = () => {
         if (!showMessageTextarea) return;
         const textarea = document.querySelector('.conversation-form-group:nth-child(2) .conversation-form-input');
