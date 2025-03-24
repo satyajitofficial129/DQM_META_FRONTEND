@@ -20,6 +20,7 @@ const FileUploadModal = ({ userId , facebookId , fileUploadSuccess, setIsActive 
     const closeModal = () => {
         setShowModal(false);
         resetFile();
+        setIsActive(false);
     };
 
     const handleFileChange = (event) => {
@@ -43,13 +44,9 @@ const FileUploadModal = ({ userId , facebookId , fileUploadSuccess, setIsActive 
             }
         }
     };
-    
-
     const resetFile = () => {
         setSelectedFile(null);
         setFilePreview(null);
-        setIsActive(false)
-        
         document.getElementById("fileInput").value = "";
     };
 
@@ -231,7 +228,10 @@ const FileUploadModal = ({ userId , facebookId , fileUploadSuccess, setIsActive 
                                             name="fileType"
                                             value="image"
                                             checked={fileType === "image"}
-                                            onChange={() => { setFileType("image"); resetFile(); }}
+                                            onChange={(e) => { 
+                                                setFileType("image");  // Set file type to image
+                                                resetFile();  // Reset the file input if needed
+                                            }}
                                         /> Image
                                     </label>
                                     <label className="me-2">
@@ -240,7 +240,10 @@ const FileUploadModal = ({ userId , facebookId , fileUploadSuccess, setIsActive 
                                             name="fileType"
                                             value="file"
                                             checked={fileType === "file"}
-                                            onChange={() => { setFileType("file"); resetFile(); }}
+                                            onChange={(e) => { 
+                                                setFileType("file");  // Set file type to file
+                                                resetFile();  // Reset the file input if needed
+                                            }}
                                         /> Document
                                     </label>
                                     <label className="me-2">
@@ -249,10 +252,14 @@ const FileUploadModal = ({ userId , facebookId , fileUploadSuccess, setIsActive 
                                             name="fileType"
                                             value="audio"
                                             checked={fileType === "audio"}
-                                            onChange={() => { setFileType("audio"); resetFile(); }}
+                                            onChange={(e) => { 
+                                                setFileType("audio");  // Set file type to audio
+                                                resetFile();  // Reset the file input if needed
+                                            }}
                                         /> Audio
                                     </label>
                                 </div>
+
 
                                 <input
                                     id="fileInput"
