@@ -86,7 +86,7 @@ const Page = () => {
 
   useEffect(() => {
     fetchConversations();
-  }, [apiBaseUrl, currentPage]); // Re-run the fetch when apiBaseUrl or currentPage changes
+  }, [apiBaseUrl, currentPage]);
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -99,13 +99,59 @@ const Page = () => {
       <div className="chat-container" style={{ width: "1650px" }}>
         <ChatSidebar />
         <div className="chat-content">
-          <div className="table-responsive mt-4" style={{ padding: "20px" }}>
+          <div style={{ padding: "40px 20px", height: '-webkit-fill-available', overflow: 'scroll' }}>
+          <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f1f1f1', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ marginBottom: '10px', color: '#333', fontWeight: 'bold' }}>Search By Customer Name</h3>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                placeholder="Enter Customer Name here..."
+                style={{
+                  flex: '1',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '15px',
+                  backgroundColor: '#fff',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)',
+                  outline: 'none',
+                  transition: 'border-color 0.3s, box-shadow 0.3s',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#007bff';
+                  e.target.style.boxShadow = '0 0 5px rgba(0, 123, 255, 0.5)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                  e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.1)';
+                }}
+              />
+              <button
+                style={{
+                  padding: '12px 20px',
+                  backgroundColor: '#007bff',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  transition: 'background-color 0.3s',
+                }}
+                onMouseEnter={(e) => (e.target.style.backgroundColor = '#0056b3')}
+                onMouseLeave={(e) => (e.target.style.backgroundColor = '#007bff')}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+
+          <div className="table-responsive mt-4" >
             <table className="table table-bordered " style={{ height: '95%', overflow: 'scroll' }}>
               <thead className="thead-dark">
                 <tr>
                   <th scope="col" style={{ width: '20%' }}>Customer Name</th>
-                  <th scope="col" style={{ width: '50%' }}>Conversation</th>
-                  <th scope="col" style={{ width: '20%', textAlign: 'center' }}>Remove From Followup</th>
+                  <th scope="col" style={{ width: '58%' }}>Conversation</th>
+                  <th scope="col" style={{ width: '12%', textAlign: 'center' }}>Remove From Followup</th>
                   <th scope="col" style={{ width: '10%', textAlign: 'center' }}>Go To Chat</th>
                 </tr>
               </thead>
@@ -130,6 +176,7 @@ const Page = () => {
                     <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                       <div
                         className="btn btn-sm btn-danger"
+                        style={{ width: '100%' }}
                         onClick={() => {
                           const isConfirmed = window.confirm("Are you sure ? you want to Remove From Follow Up!!");
                           if (isConfirmed) {
@@ -154,11 +201,14 @@ const Page = () => {
               </tbody>
             </table>
           </div>
+          </div>
+          
 
           {/* Pagination Controls */}
-          <div className="pagination-controls mt-3" style={{ position: 'absolute', right: '10px', bottom: '20px' }}>
+          <div className="pagination-controls mt-3" style={{ position: 'absolute', right: '0', bottom: '0' }}>
             <nav aria-label="Page navigation">
-              <ul className="pagination justify-content-center">
+              <ul className="pagination justify-content-center" style={{ marginBottom: '0' }}>
+
                 <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
                   <button
                     className="page-link"
