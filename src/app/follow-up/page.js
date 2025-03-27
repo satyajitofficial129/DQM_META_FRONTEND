@@ -14,6 +14,7 @@ const Page = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [customerName, setCustomerName] = useState("");
   const apiBaseUrl = NEXT_PUBLIC_API_BASE_URL;
   const router = useRouter();
 
@@ -39,23 +40,27 @@ const Page = () => {
     updateChat();
   };
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (search = "") => {
     try {
       const authUserId = await getAuthUserId();
-      const endpoint = `/follow-up-list/${authUserId}?page=${currentPage}`;
+      
+      // Build API URL dynamically
+      let endpoint = `/follow-up-list/${authUserId}?page=${currentPage}`;
+      if (search) {
+        endpoint += `&customer_name=${encodeURIComponent(search)}`;
+      }
+  
       const url = `${apiBaseUrl}${endpoint}`;
-
       const response = await axios.get(url);
-      console.log(response.data);
-
+  
       if (response.status === 200) {
         const data = response.data.data.map((conversation) => ({
           customerId: conversation.id,
           customerName: conversation.name,
           messageLogs: conversation.message_logs || [],
         }));
+  
         setConversations(data);
-        setCurrentPage(response.data.current_page);
         setTotalPages(response.data.total_pages);
         setTotalItems(response.data.total_items);
       }
@@ -64,35 +69,29 @@ const Page = () => {
       console.error("Error fetching conversations:", error);
     }
   };
-
-  const handleFollowUp = (customerId) => {
-    const removeFollowUp = async () => {
-      try {
-        const endpoint = `/remove-follow-up/${customerId}`;
-        const url = `${apiBaseUrl}${endpoint}`;
-        const response = await axios.get(url);
-
-        toast.success(response.data.message);
-
-        // Fetch the updated list of conversations after removing follow-up
-        fetchConversations();
-      } catch (error) {
-        console.error('Error during API call:', error);
-        toast.error('An error occurred while processing your request.');
-      }
-    };
-    removeFollowUp();
+  
+  // 🔹 Handle search button click
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchConversations(customerName);
   };
-
-  useEffect(() => {
-    fetchConversations();
-  }, [apiBaseUrl, currentPage]);
-
+  const resetCustomerName = () => {
+    setCustomerName("");
+    setCurrentPage(1);
+    fetchConversations("");
+  };
+  
+  // 🔹 Handle page change
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
+
+  useEffect(() => {
+    fetchConversations(customerName);
+  }, [currentPage]);
+  
 
   return (
     <section className="chat-section">
@@ -104,6 +103,8 @@ const Page = () => {
             <h3 style={{ marginBottom: '10px', color: '#333', fontWeight: 'bold' }}>Search By Customer Name</h3>
             <div style={{ display: 'flex', gap: '10px' }}>
               <input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
                 type="text"
                 placeholder="Enter Customer Name here..."
                 style={{
@@ -127,6 +128,7 @@ const Page = () => {
                 }}
               />
               <button
+                onClick={handleSearch}
                 style={{
                   padding: '12px 20px',
                   backgroundColor: '#007bff',
@@ -142,6 +144,25 @@ const Page = () => {
               >
                 Submit
               </button>
+
+              <button
+              onClick={resetCustomerName}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: 'red',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '15px',
+                transition: 'background-color 0.3s',
+              }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = 'red')}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = 'red')}
+              >
+                Reset
+              </button>
+              
             </div>
           </div>
 
@@ -191,6 +212,7 @@ const Page = () => {
                     <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                       <div
                         className="btn btn-sm btn-success"
+                        style={{ width: '100%' }}
                         onClick={() => handleRedirect(conversation.customerId)}
                       >
                         <i className="ri-corner-up-left-double-line"></i>
